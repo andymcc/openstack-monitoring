@@ -17,19 +17,21 @@
 include_recipe "monitoring"
 
 if node.recipe?("nova::api-os-compute") or node[:recipes].include?("nova::api-os-compute")
-    platform_options = node["nova"]["platform"]
+  platform_options = node["nova"]["platform"]
+  nova_osapi_endpoint = get_access_endpoint("nova-api-os-compute", "nova", "api")
+  unless nova_osapi_endpoint["scheme"] == "https"
     monitoring_procmon "nova-api-os-compute" do
-        service_name=platform_options["api_os_compute_service"]
-        pname=platform_options["api_os_compute_process_name"]
-        process_name pname
-        script_name service_name
+      service_name=platform_options["api_os_compute_service"]
+      pname=platform_options["api_os_compute_process_name"]
+      process_name pname
+      script_name service_name
     end
+  end
 
-    monitoring_metric "nova-api-os-compute-proc" do
-        type "proc"
-        proc_name "nova-api-os-compute"
-        proc_regex platform_options["api_os_compute_service"]
-
-        alarms(:failure_min => 2.0)
-    end
+  monitoring_metric "nova-api-os-compute-proc" do
+    type "proc"
+    proc_name "nova-api-os-compute"
+    proc_regex platform_options["api_os_compute_service"]
+    alarms(:failure_min => 2.0)
+  end
 end

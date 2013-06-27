@@ -18,31 +18,33 @@ include_recipe "monitoring"
 
 # Glance monitoring setup..
 if node.recipe?("glance::glance-api") or node[:recipes].include?("glance::glance-api")
-	platform_options = node["glance"]["platform"]
-	monitoring_procmon "glance-api" do
-            sname = platform_options["glance_api_service"]
-            pname = platform_options["glance_api_process_name"]
-            process_name pname
-            script_name sname
-	end
+  platform_options = node["glance"]["platform"]
+  glance_api_endpoint = get_bind_endpoint("glance", "api")
+  unless glance_api_endpoint["scheme"] == "https"
+    monitoring_procmon "glance-api" do
+      sname = platform_options["glance_api_service"]
+      pname = platform_options["glance_api_process_name"]
+      process_name pname
+      script_name sname
+    end
+  end
 
-	monitoring_metric "glance-api-proc" do
-            type "proc"
-            proc_name "glance-api"
-            proc_regex platform_options["glance_api_service"]
+  monitoring_metric "glance-api-proc" do
+    type "proc"
+    proc_name "glance-api"
+    proc_regex platform_options["glance_api_service"]
+    alarms(:failure_min => 2.0)
+  end
 
-            alarms(:failure_min => 2.0)
-	end
-
-	# set up glance api monitoring (bytes/objects per tentant, etc)
-	monitoring_metric "glance-api" do
-	    type "pyscript"
-	    script "glance_plugin.py"
-	    options(
-	        "Username" => node["glance"]["service_user"],
-	        "Password" => node["glance"]["service_pass"],
-	        "TenantName" => node["glance"]["service_tenant_name"],
-	        "AuthURL" => ks_service_endpoint["uri"]
-	    )
-	end
+  # set up glance api monitoring (bytes/objects per tentant, etc)
+  monitoring_metric "glance-api" do
+    type "pyscript"
+    script "glance_plugin.py"
+    options(
+        "Username" => node["glance"]["service_user"],
+        "Password" => node["glance"]["service_pass"],
+        "TenantName" => node["glance"]["service_tenant_name"],
+        "AuthURL" => ks_service_endpoint["uri"]
+    )
+  end
 end
